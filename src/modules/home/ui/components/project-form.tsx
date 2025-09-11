@@ -14,6 +14,7 @@ import { Form, FormField } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { PROJECT_TEMPLATES } from "../../constants";
+import { useClerk } from "@clerk/nextjs";
 
 const formSchema = z.object({
   content: z
@@ -35,6 +36,7 @@ export const ProjectForm = () => {
   });
 
   const trpc = useTRPC();
+  const clerk = useClerk();
 
   const createProject = useMutation(
     trpc.projects.create.mutationOptions({
@@ -45,6 +47,9 @@ export const ProjectForm = () => {
 
       onError: (error) => {
         toast.error(error.message);
+        if (error.data?.code === "UNAUTHORIZED") {
+          clerk.openSignIn();
+        }
       },
     })
   );
