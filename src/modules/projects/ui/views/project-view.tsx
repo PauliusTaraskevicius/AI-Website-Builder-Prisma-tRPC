@@ -19,6 +19,7 @@ import { TabsContent } from "@radix-ui/react-tabs";
 
 import { FileExplorer } from "@/components/file-explorer";
 import { UserControl } from "@/components/user-control";
+import { useAuth } from "@clerk/nextjs";
 
 interface Props {
   projectId: string;
@@ -29,6 +30,9 @@ export const ProjectView = ({ projectId }: Props) => {
     useState<Fragment | null>(null);
 
   const [tabState, setTabState] = useState<"preview" | "code">("preview");
+
+  const { has } = useAuth();
+  const hasProAccess = has?.({ plan: "pro" });
 
   return (
     <div className="h-screen">
@@ -69,11 +73,14 @@ export const ProjectView = ({ projectId }: Props) => {
                 </TabsTrigger>
               </TabsList>{" "}
               <div className="ml-auto flex items-center gap-x-2">
-                <Button asChild size="sm" variant="tertiary">
-                  <Link href="/pricing">
-                    <CrownIcon /> Upgrade
-                  </Link>
-                </Button>
+                {!hasProAccess && (
+                  <Button asChild size="sm" variant="tertiary">
+                    <Link href="/pricing">
+                      <CrownIcon /> Upgrade
+                    </Link>
+                  </Button>
+                )}
+
                 <UserControl />
               </div>
             </div>
