@@ -5,11 +5,13 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { ArrowUpIcon, Loader2Icon } from "lucide-react";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
 import { cn } from "@/lib/utils";
 import { Form, FormField } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { Usage } from "./usage";
+import { useRouter } from "next/router";
 
 interface Props {
   projectId: string;
@@ -23,9 +25,13 @@ const formSchema = z.object({
 });
 
 export const MessageForm = ({ projectId }: Props) => {
+  const router = useRouter();
   const [isFocused, setIsFocused] = useState(false);
-  const showUsage = false;
   const queryClient = useQueryClient();
+  const trpc = useTRPC();
+
+  const { data: usage } = useQuery(trpc.usage.status.queryOptions());
+  const showUsage = !!usage;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -34,7 +40,6 @@ export const MessageForm = ({ projectId }: Props) => {
     },
   });
 
-  const trpc = useTRPC();
   const createMessage = useMutation(
     trpc.messages.create.mutationOptions({
       onSuccess: () => {
@@ -44,9 +49,13 @@ export const MessageForm = ({ projectId }: Props) => {
             projectId,
           })
         );
+        queryClient.invalidateQueries(trpc.usage.status.queryOptions());
       },
       onError: (error) => {
         toast.error(error.message);
+        if (error.data?.code === "TOO_MANY_REQUESTS") {
+          router.push("/pricing");
+        }
       },
     })
   );
@@ -63,6 +72,12 @@ export const MessageForm = ({ projectId }: Props) => {
 
   return (
     <Form {...form}>
+      {showUsage && (
+        <Usage
+          points={usage.remainingPoints}
+          msBeforeNext={usage.msBeforeNext}
+        />
+      )}
       <form
         onSubmit={form.handleSubmit(onSubmit)}
         className={cn(
